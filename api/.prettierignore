@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Database
+prisma/migrations/
+
+# Coverage
+coverage/
+
+# Logs
+*.log
+
+# Environment files
+.env*
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+*.generated.ts
+*.d.ts
+
+# Documentation
+README.md
+CHANGELOG.md
+
+# Config files
+.eslintrc*
+.prettierrc*
+tsconfig*.json
+nest-cli.json 
