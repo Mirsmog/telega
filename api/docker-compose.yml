@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: telega-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: telega_db
+      POSTGRES_USER: telega_user
+      POSTGRES_PASSWORD: telega_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - telega-network
+
+  # Redis Cache & Queue
+  redis:
+    image: redis:7-alpine
+    container_name: telega-redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - telega-network
+
+  # Telega API (NestJS)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telega-api
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://telega_user:telega_password@postgres:5432/telega_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: telega_jwt_secret_key_2023
+      JWT_EXPIRES_IN: 24h
+      TINKOFF_TERMINAL_KEY: your_tinkoff_terminal_key
+      TINKOFF_SECRET_KEY: your_tinkoff_secret_key
+      TELEGRAM_BOT_TOKEN: your_telegram_bot_token
+      TELEGRAM_BOT_WEBHOOK_URL: https://your-domain.com/webhook
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    working_dir: /app
+    command: pnpm run start:dev
+    networks:
+      - telega-network
+
+  # PostgreSQL Admin (pgAdmin)
+  pgadmin:
+    image: dpage/pgadmin4:7
+    container_name: telega-pgadmin
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@telega.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - telega-network
+
+  # Redis Commander (Redis GUI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: telega-redis-commander
+    restart: always
+    depends_on:
+      - redis
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - telega-network
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# Network for service communication
+networks:
+  telega-network:
+    driver: bridge 
