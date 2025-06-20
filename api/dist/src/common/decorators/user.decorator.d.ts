@@ -3,4 +3,4 @@ export interface UserPayload {
     telegramId: string;
     roles: string[];
 }
-export declare const User: (...dataOrPipes: (import("@nestjs/common").PipeTransform<any, any> | keyof UserPayload | import("@nestjs/common").Type<import("@nestjs/common").PipeTransform<any, any>>)[]) => ParameterDecorator;
+export declare const User: (...dataOrPipes: (keyof UserPayload | import("@nestjs/common").PipeTransform<any, any> | import("@nestjs/common").Type<import("@nestjs/common").PipeTransform<any, any>>)[]) => ParameterDecorator;

@@ -1,0 +1,6 @@
+export declare enum ClientType {
+    TELEGRAM_BOT = "TELEGRAM_BOT",
+    TELEGRAM_WEB_APP = "TELEGRAM_WEB_APP",
+    WEB_BROWSER = "WEB_BROWSER",
+    MOBILE_APP = "MOBILE_APP"
+}

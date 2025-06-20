@@ -4,7 +4,7 @@ exports.RoleType = void 0;
 var RoleType;
 (function (RoleType) {
     RoleType["CUSTOMER"] = "CUSTOMER";
-    RoleType["PERFORMER"] = "PERFORMER";
+    RoleType["EXECUTOR"] = "EXECUTOR";
     RoleType["ADMIN"] = "ADMIN";
 })(RoleType || (exports.RoleType = RoleType = {}));
 //# sourceMappingURL=role-type.enum.js.map

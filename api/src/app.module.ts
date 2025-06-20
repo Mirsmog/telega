@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './database/prisma.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -19,6 +21,12 @@ import { PrismaModule } from './database/prisma.module';
 
     // Database
     PrismaModule,
+
+    // User Management
+    UserModule,
+
+    // Authentication
+    AuthModule,
   ],
   controllers: [],
   providers: [],

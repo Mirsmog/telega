@@ -8,4 +8,3 @@ export { PaymentStatus } from './payment-status.enum';
 export { RoleType } from './role-type.enum';
 export { SessionStatus } from './session-status.enum';
 export { TariffType } from './tariff-type.enum';
-

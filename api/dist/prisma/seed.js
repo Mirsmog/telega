@@ -12,8 +12,9 @@ async function main() {
             create: {
                 name: 'Москва',
                 code: 'MSK',
-                oneTimeTariff: 350.00,
-                optimalTariff: 2500.00,
+                regionCode: '01',
+                oneTimePlanPrice: 350.00,
+                monthlyPlanPrice: 2500.00,
             },
         }),
         prisma.region.upsert({
@@ -22,8 +23,9 @@ async function main() {
             create: {
                 name: 'Санкт-Петербург',
                 code: 'SPB',
-                oneTimeTariff: 300.00,
-                optimalTariff: 2200.00,
+                regionCode: '02',
+                oneTimePlanPrice: 300.00,
+                monthlyPlanPrice: 2200.00,
             },
         }),
         prisma.region.upsert({
@@ -32,8 +34,9 @@ async function main() {
             create: {
                 name: 'Екатеринбург',
                 code: 'EKB',
-                oneTimeTariff: 250.00,
-                optimalTariff: 1800.00,
+                regionCode: '03',
+                oneTimePlanPrice: 250.00,
+                monthlyPlanPrice: 1800.00,
             },
         }),
         prisma.region.upsert({
@@ -42,8 +45,9 @@ async function main() {
             create: {
                 name: 'Новосибирск',
                 code: 'NSK',
-                oneTimeTariff: 230.00,
-                optimalTariff: 1600.00,
+                regionCode: '04',
+                oneTimePlanPrice: 230.00,
+                monthlyPlanPrice: 1600.00,
             },
         }),
         prisma.region.upsert({
@@ -52,8 +56,9 @@ async function main() {
             create: {
                 name: 'Казань',
                 code: 'KZN',
-                oneTimeTariff: 220.00,
-                optimalTariff: 1500.00,
+                regionCode: '05',
+                oneTimePlanPrice: 220.00,
+                monthlyPlanPrice: 1500.00,
             },
         }),
         prisma.region.upsert({
@@ -62,8 +67,9 @@ async function main() {
             create: {
                 name: 'Ростов-на-Дону',
                 code: 'RND',
-                oneTimeTariff: 200.00,
-                optimalTariff: 1400.00,
+                regionCode: '06',
+                oneTimePlanPrice: 200.00,
+                monthlyPlanPrice: 1400.00,
             },
         }),
     ]);
@@ -74,6 +80,7 @@ async function main() {
         update: {},
         create: {
             name: 'Легковые автомобили',
+            displayName: 'Легковые автомобили',
             description: 'Легковые автомобили для перевозки людей',
         },
     });
@@ -83,6 +90,7 @@ async function main() {
         create: {
             categoryId: carCategory.id,
             name: 'Стандарт',
+            displayName: 'Стандарт',
             description: 'Обычные легковые автомобили',
         },
     });
@@ -93,6 +101,7 @@ async function main() {
             create: {
                 typeId: carType.id,
                 name: 'Седан',
+                displayName: 'Седан',
                 description: 'Седан (4 места)',
             },
         }),
@@ -102,6 +111,7 @@ async function main() {
             create: {
                 typeId: carType.id,
                 name: 'Универсал',
+                displayName: 'Универсал',
                 description: 'Универсал (5 мест)',
             },
         }),
@@ -111,6 +121,7 @@ async function main() {
             create: {
                 typeId: carType.id,
                 name: 'Минивэн',
+                displayName: 'Минивэн',
                 description: 'Минивэн (7-8 мест)',
             },
         }),
@@ -120,6 +131,7 @@ async function main() {
         update: {},
         create: {
             name: 'Грузовые автомобили',
+            displayName: 'Грузовые автомобили',
             description: 'Грузовые автомобили для перевозки грузов',
         },
     });
@@ -129,6 +141,7 @@ async function main() {
         create: {
             categoryId: truckCategory.id,
             name: 'Легкие грузовики',
+            displayName: 'Легкие грузовики',
             description: 'Грузовики до 3.5 тонн',
         },
     });
@@ -138,6 +151,7 @@ async function main() {
         create: {
             categoryId: truckCategory.id,
             name: 'Средние грузовики',
+            displayName: 'Средние грузовики',
             description: 'Грузовики от 3.5 до 12 тонн',
         },
     });
@@ -148,6 +162,7 @@ async function main() {
             create: {
                 typeId: lightTruckType.id,
                 name: 'Газель',
+                displayName: 'Газель',
                 description: 'ГАЗель и аналоги (до 1.5 тонн)',
             },
         }),
@@ -157,6 +172,7 @@ async function main() {
             create: {
                 typeId: lightTruckType.id,
                 name: 'Бычок',
+                displayName: 'Бычок',
                 description: 'Малый грузовик (до 3 тонн)',
             },
         }),
@@ -166,6 +182,7 @@ async function main() {
             create: {
                 typeId: mediumTruckType.id,
                 name: 'Средний грузовик',
+                displayName: 'Средний грузовик',
                 description: 'Грузовик 5-10 тонн',
             },
         }),
@@ -175,6 +192,7 @@ async function main() {
             create: {
                 typeId: mediumTruckType.id,
                 name: 'Рефрижератор',
+                displayName: 'Рефрижератор',
                 description: 'Грузовик с холодильной установкой',
             },
         }),
@@ -184,141 +202,125 @@ async function main() {
         update: {},
         create: {
             name: 'Специальная техника',
-            description: 'Специализированная техника',
+            displayName: 'Специальная техника',
+            description: 'Специализированная техника для особых задач',
         },
     });
     const specialType = await prisma.vehicleType.upsert({
-        where: { categoryId_name: { categoryId: specialCategory.id, name: 'Погрузочная техника' } },
+        where: { categoryId_name: { categoryId: specialCategory.id, name: 'Спецтехника' } },
         update: {},
         create: {
             categoryId: specialCategory.id,
-            name: 'Погрузочная техника',
-            description: 'Техника для погрузо-разгрузочных работ',
+            name: 'Спецтехника',
+            displayName: 'Спецтехника',
+            description: 'Специализированная техника',
         },
     });
     await Promise.all([
-        prisma.vehicleSubtype.upsert({
-            where: { typeId_name: { typeId: specialType.id, name: 'Кран' } },
-            update: {},
-            create: {
-                typeId: specialType.id,
-                name: 'Кран',
-                description: 'Автокран различной грузоподъемности',
-            },
-        }),
         prisma.vehicleSubtype.upsert({
             where: { typeId_name: { typeId: specialType.id, name: 'Эвакуатор' } },
             update: {},
             create: {
                 typeId: specialType.id,
                 name: 'Эвакуатор',
-                description: 'Эвакуатор для перевозки автомобилей',
+                displayName: 'Эвакуатор',
+                description: 'Эвакуатор для транспортировки автомобилей',
+            },
+        }),
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: specialType.id, name: 'Кран' } },
+            update: {},
+            create: {
+                typeId: specialType.id,
+                name: 'Кран',
+                displayName: 'Кран',
+                description: 'Автокран для подъемных работ',
+            },
+        }),
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: specialType.id, name: 'Манипулятор' } },
+            update: {},
+            create: {
+                typeId: specialType.id,
+                name: 'Манипулятор',
+                displayName: 'Манипулятор',
+                description: 'Манипулятор для погрузочных работ',
+            },
+        }),
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: specialType.id, name: 'Экскаватор' } },
+            update: {},
+            create: {
+                typeId: specialType.id,
+                name: 'Экскаватор',
+                displayName: 'Экскаватор',
+                description: 'Экскаватор для земляных работ',
             },
         }),
     ]);
     console.log('✅ Created vehicle catalog');
-    console.log('Creating admin user...');
-    const adminUser = await prisma.user.upsert({
-        where: { telegramId: BigInt(123456789) },
+    console.log('Creating test users...');
+    const testCustomer = await prisma.user.upsert({
+        where: { telegramId: BigInt('123456789') },
         update: {},
         create: {
-            telegramId: BigInt(123456789),
-            username: 'admin',
-            firstName: 'System',
-            lastName: 'Administrator',
-            role: client_1.RoleType.ADMIN,
-            referralCode: 'ADMIN001',
-            balance: 0,
-            frozenBalance: 0,
-        },
-    });
-    console.log(`✅ Created admin user: ${adminUser.firstName} ${adminUser.lastName}`);
-    console.log('Creating test customer...');
-    const customerUser = await prisma.user.upsert({
-        where: { telegramId: BigInt(987654321) },
-        update: {},
-        create: {
-            telegramId: BigInt(987654321),
-            username: 'testcustomer',
-            firstName: 'Тест',
-            lastName: 'Заказчик',
+            telegramId: BigInt('123456789'),
+            username: 'test_customer',
+            firstName: 'Иван',
+            lastName: 'Иванов',
             role: client_1.RoleType.CUSTOMER,
-            referralCode: 'CUST001',
-            balance: 1000.00,
-            frozenBalance: 0,
+            phone: '+79001234567',
+            lastSeenAt: new Date(),
         },
     });
-    console.log(`✅ Created test customer: ${customerUser.firstName} ${customerUser.lastName}`);
-    console.log('Creating test executor...');
-    const executorUser = await prisma.user.upsert({
-        where: { telegramId: BigInt(456789123) },
+    const testExecutor = await prisma.user.upsert({
+        where: { telegramId: BigInt('987654321') },
         update: {},
         create: {
-            telegramId: BigInt(456789123),
-            username: 'testexecutor',
-            firstName: 'Тест',
-            lastName: 'Исполнитель',
+            telegramId: BigInt('987654321'),
+            username: 'test_executor',
+            firstName: 'Петр',
+            lastName: 'Петров',
             role: client_1.RoleType.EXECUTOR,
-            referralCode: 'EXEC001',
-            balance: 500.00,
-            frozenBalance: 0,
+            phone: '+79007654321',
+            lastSeenAt: new Date(),
         },
     });
-    await prisma.userRegion.upsert({
-        where: { userId_regionId: { userId: executorUser.id, regionId: regions[0].id } },
+    const testAdmin = await prisma.user.upsert({
+        where: { telegramId: BigInt('555666777') },
         update: {},
         create: {
-            userId: executorUser.id,
-            regionId: regions[0].id,
-            tariffType: client_1.TariffType.OPTIMAL,
-            paidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            telegramId: BigInt('555666777'),
+            username: 'test_admin',
+            firstName: 'Админ',
+            lastName: 'Админов',
+            role: client_1.RoleType.ADMIN,
+            phone: '+79005556677',
+            lastSeenAt: new Date(),
         },
     });
-    console.log(`✅ Created test executor: ${executorUser.firstName} ${executorUser.lastName}`);
-    console.log('Creating basic configuration...');
-    await Promise.all([
-        prisma.config.upsert({
-            where: { key: 'ORDER_PLACEMENT_FEE' },
+    console.log('✅ Created test users');
+    console.log('Creating user regions...');
+    const moscowRegion = regions.find(r => r.code === 'MSK');
+    if (moscowRegion && testExecutor) {
+        await prisma.userRegion.upsert({
+            where: { userId_regionId: { userId: testExecutor.id, regionId: moscowRegion.id } },
             update: {},
             create: {
-                key: 'ORDER_PLACEMENT_FEE',
-                value: '70.00',
-                description: 'Стоимость размещения заказа для заказчиков',
+                userId: testExecutor.id,
+                regionId: moscowRegion.id,
+                regionCode: moscowRegion.regionCode,
+                planType: client_1.TariffType.OPTIMAL,
+                paidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                activeSubRegions: ['Центр', 'Север'],
             },
-        }),
-        prisma.config.upsert({
-            where: { key: 'REFERRAL_BONUS' },
-            update: {},
-            create: {
-                key: 'REFERRAL_BONUS',
-                value: '50.00',
-                description: 'Бонус за приведенного пользователя',
-            },
-        }),
-        prisma.config.upsert({
-            where: { key: 'MIN_WITHDRAWAL_AMOUNT' },
-            update: {},
-            create: {
-                key: 'MIN_WITHDRAWAL_AMOUNT',
-                value: '100.00',
-                description: 'Минимальная сумма для вывода средств',
-            },
-        }),
-        prisma.config.upsert({
-            where: { key: 'SYSTEM_COMMISSION' },
-            update: {},
-            create: {
-                key: 'SYSTEM_COMMISSION',
-                value: '5.00',
-                description: 'Комиссия системы в процентах',
-            },
-        }),
-    ]);
-    console.log('✅ Created basic configuration');
+        });
+    }
+    console.log('✅ Created user regions');
     console.log('🎉 Seed completed successfully!');
 }
 main()
-    .catch(e => {
+    .catch((e) => {
     console.error('❌ Seed failed:', e);
     process.exit(1);
 })

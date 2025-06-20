@@ -1,0 +1,31 @@
+import { RoleType } from '@prisma/client';
+export declare class UserResponseDto {
+    id: string;
+    telegramId: string;
+    username?: string;
+    firstName: string;
+    lastName?: string;
+    phone?: string;
+    email?: string;
+    role: RoleType;
+    isActive: boolean;
+    isBanned: boolean;
+    banReason?: string;
+    balance: string;
+    frozenBalance: string;
+    totalEarned: string;
+    orderLimit: number;
+    createLimit: number;
+    completedOrders: number;
+    cancelledOrders: number;
+    averageRating: string;
+    totalReviews: number;
+    hasActivePlan: boolean;
+    planExpiresAt?: Date;
+    referralCode?: string;
+    notificationsEnabled: boolean;
+    emailNotifications: boolean;
+    lastSeenAt?: Date;
+    createdAt: Date;
+    updatedAt: Date;
+}
