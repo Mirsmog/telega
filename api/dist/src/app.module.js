@@ -10,15 +10,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const throttler_1 = require("@nestjs/throttler");
-const auth_module_1 = require("./auth/auth.module");
-const prisma_module_1 = require("./common/prisma/prisma.module");
-const health_module_1 = require("./health/health.module");
-const notifications_module_1 = require("./notifications/notifications.module");
-const orders_module_1 = require("./orders/orders.module");
-const payments_module_1 = require("./payments/payments.module");
-const regions_module_1 = require("./regions/regions.module");
-const users_module_1 = require("./users/users.module");
-const vehicles_module_1 = require("./vehicles/vehicles.module");
+const prisma_module_1 = require("./database/prisma.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -29,23 +21,11 @@ exports.AppModule = AppModule = __decorate([
                 isGlobal: true,
                 envFilePath: '.env',
             }),
-            throttler_1.ThrottlerModule.forRootAsync({
-                imports: [config_1.ConfigModule],
-                inject: [config_1.ConfigService],
-                useFactory: (configService) => ({
-                    ttl: configService.get('THROTTLE_TTL', 60),
-                    limit: configService.get('THROTTLE_LIMIT', 10),
-                }),
+            throttler_1.ThrottlerModule.forRoot({
+                ttl: 60,
+                limit: 10,
             }),
             prisma_module_1.PrismaModule,
-            auth_module_1.AuthModule,
-            users_module_1.UsersModule,
-            orders_module_1.OrdersModule,
-            payments_module_1.PaymentsModule,
-            regions_module_1.RegionsModule,
-            vehicles_module_1.VehiclesModule,
-            notifications_module_1.NotificationsModule,
-            health_module_1.HealthModule,
         ],
         controllers: [],
         providers: [],

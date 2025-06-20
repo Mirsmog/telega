@@ -3,246 +3,326 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 async function main() {
-    console.log('🌱 Starting database seeding...');
-    console.log('📦 Seeding vehicle categories...');
-    const vehicleCategories = [
-        {
-            code: 'CAR',
-            name: 'Легковой автомобиль',
-            description: 'Обычные легковые автомобили'
-        },
-        {
-            code: 'VAN',
-            name: 'Микроавтобус/Фургон',
-            description: 'Микроавтобусы и фургоны'
-        },
-        {
-            code: 'TRUCK_SMALL',
-            name: 'Грузовик до 3.5т',
-            description: 'Малые грузовые автомобили'
-        },
-        {
-            code: 'TRUCK_MEDIUM',
-            name: 'Грузовик 3.5-10т',
-            description: 'Средние грузовые автомобили'
-        },
-        {
-            code: 'TRUCK_LARGE',
-            name: 'Грузовик 10т+',
-            description: 'Большие грузовые автомобили'
-        },
-        {
-            code: 'SPECIAL',
-            name: 'Спецтехника',
-            description: 'Специальная техника'
-        }
-    ];
-    for (const category of vehicleCategories) {
-        await prisma.vehicleCategory.upsert({
-            where: { code: category.code },
+    console.log('🌱 Starting seed...');
+    console.log('Creating regions...');
+    const regions = await Promise.all([
+        prisma.region.upsert({
+            where: { code: 'MSK' },
             update: {},
-            create: category
-        });
-    }
-    console.log('🗺️ Seeding regions...');
-    const regions = [
-        {
-            code: '77',
-            name: 'Москва',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 300,
-            optimalTariff: 200
-        },
-        {
-            code: '78',
-            name: 'Санкт-Петербург',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 280,
-            optimalTariff: 190
-        },
-        {
-            code: '33',
-            name: 'Владимирская область',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 250,
-            optimalTariff: 170
-        },
-        {
-            code: '23',
-            name: 'Краснодарский край',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 350,
-            optimalTariff: 220
-        },
-        {
-            code: '50',
-            name: 'Московская область',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 270,
-            optimalTariff: 180
-        },
-        {
-            code: '47',
-            name: 'Ленинградская область',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 260,
-            optimalTariff: 175
-        },
-        {
-            code: '61',
-            name: 'Ростовская область',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 240,
-            optimalTariff: 165
-        },
-        {
-            code: '63',
-            name: 'Самарская область',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 230,
-            optimalTariff: 160
-        },
-        {
-            code: '66',
-            name: 'Свердловская область',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 220,
-            optimalTariff: 155
-        },
-        {
-            code: '74',
-            name: 'Челябинская область',
-            level: 1,
-            customerTariff: 70,
-            performerTariff: 210,
-            optimalTariff: 150
-        }
-    ];
-    for (const region of regions) {
-        await prisma.region.upsert({
-            where: { code: region.code },
+            create: {
+                name: 'Москва',
+                code: 'MSK',
+                oneTimeTariff: 350.00,
+                optimalTariff: 2500.00,
+            },
+        }),
+        prisma.region.upsert({
+            where: { code: 'SPB' },
             update: {},
-            create: region
-        });
-    }
-    console.log('🏙️ Seeding Moscow subregions...');
-    const moscowSubregions = [
-        {
-            code: '77_01',
-            name: 'Центральный округ',
-            parentCode: '77',
-            level: 2,
-            customerTariff: 70,
-            performerTariff: 300,
-            optimalTariff: 200
-        },
-        {
-            code: '77_02',
-            name: 'Северный округ',
-            parentCode: '77',
-            level: 2,
-            customerTariff: 70,
-            performerTariff: 300,
-            optimalTariff: 200
-        },
-        {
-            code: '77_03',
-            name: 'Северо-Восточный округ',
-            parentCode: '77',
-            level: 2,
-            customerTariff: 70,
-            performerTariff: 300,
-            optimalTariff: 200
-        },
-        {
-            code: '77_04',
-            name: 'Восточный округ',
-            parentCode: '77',
-            level: 2,
-            customerTariff: 70,
-            performerTariff: 300,
-            optimalTariff: 200
-        },
-        {
-            code: '77_05',
-            name: 'Юго-Восточный округ',
-            parentCode: '77',
-            level: 2,
-            customerTariff: 70,
-            performerTariff: 300,
-            optimalTariff: 200
-        }
-    ];
-    for (const subregion of moscowSubregions) {
-        await prisma.region.upsert({
-            where: { code: subregion.code },
+            create: {
+                name: 'Санкт-Петербург',
+                code: 'SPB',
+                oneTimeTariff: 300.00,
+                optimalTariff: 2200.00,
+            },
+        }),
+        prisma.region.upsert({
+            where: { code: 'EKB' },
             update: {},
-            create: subregion
-        });
-    }
-    console.log('⚙️ Seeding system settings...');
-    const systemSettings = [
-        {
-            key: 'APP_VERSION',
-            value: '1.0.0',
-            description: 'Current application version'
+            create: {
+                name: 'Екатеринбург',
+                code: 'EKB',
+                oneTimeTariff: 250.00,
+                optimalTariff: 1800.00,
+            },
+        }),
+        prisma.region.upsert({
+            where: { code: 'NSK' },
+            update: {},
+            create: {
+                name: 'Новосибирск',
+                code: 'NSK',
+                oneTimeTariff: 230.00,
+                optimalTariff: 1600.00,
+            },
+        }),
+        prisma.region.upsert({
+            where: { code: 'KZN' },
+            update: {},
+            create: {
+                name: 'Казань',
+                code: 'KZN',
+                oneTimeTariff: 220.00,
+                optimalTariff: 1500.00,
+            },
+        }),
+        prisma.region.upsert({
+            where: { code: 'RND' },
+            update: {},
+            create: {
+                name: 'Ростов-на-Дону',
+                code: 'RND',
+                oneTimeTariff: 200.00,
+                optimalTariff: 1400.00,
+            },
+        }),
+    ]);
+    console.log(`✅ Created ${regions.length} regions`);
+    console.log('Creating vehicle catalog...');
+    const carCategory = await prisma.vehicleCategory.upsert({
+        where: { name: 'Легковые автомобили' },
+        update: {},
+        create: {
+            name: 'Легковые автомобили',
+            description: 'Легковые автомобили для перевозки людей',
         },
-        {
-            key: 'MAINTENANCE_MODE',
-            value: 'false',
-            description: 'Maintenance mode flag'
+    });
+    const carType = await prisma.vehicleType.upsert({
+        where: { categoryId_name: { categoryId: carCategory.id, name: 'Стандарт' } },
+        update: {},
+        create: {
+            categoryId: carCategory.id,
+            name: 'Стандарт',
+            description: 'Обычные легковые автомобили',
         },
-        {
-            key: 'DEFAULT_CUSTOMER_TARIFF',
-            value: '70',
-            description: 'Default tariff for customers'
+    });
+    await Promise.all([
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: carType.id, name: 'Седан' } },
+            update: {},
+            create: {
+                typeId: carType.id,
+                name: 'Седан',
+                description: 'Седан (4 места)',
+            },
+        }),
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: carType.id, name: 'Универсал' } },
+            update: {},
+            create: {
+                typeId: carType.id,
+                name: 'Универсал',
+                description: 'Универсал (5 мест)',
+            },
+        }),
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: carType.id, name: 'Минивэн' } },
+            update: {},
+            create: {
+                typeId: carType.id,
+                name: 'Минивэн',
+                description: 'Минивэн (7-8 мест)',
+            },
+        }),
+    ]);
+    const truckCategory = await prisma.vehicleCategory.upsert({
+        where: { name: 'Грузовые автомобили' },
+        update: {},
+        create: {
+            name: 'Грузовые автомобили',
+            description: 'Грузовые автомобили для перевозки грузов',
         },
-        {
-            key: 'DEFAULT_PERFORMER_TARIFF',
-            value: '200',
-            description: 'Default tariff for performers'
+    });
+    const lightTruckType = await prisma.vehicleType.upsert({
+        where: { categoryId_name: { categoryId: truckCategory.id, name: 'Легкие грузовики' } },
+        update: {},
+        create: {
+            categoryId: truckCategory.id,
+            name: 'Легкие грузовики',
+            description: 'Грузовики до 3.5 тонн',
         },
-        {
-            key: 'MAX_ORDERS_PER_USER',
-            value: '5',
-            description: 'Maximum active orders per user'
+    });
+    const mediumTruckType = await prisma.vehicleType.upsert({
+        where: { categoryId_name: { categoryId: truckCategory.id, name: 'Средние грузовики' } },
+        update: {},
+        create: {
+            categoryId: truckCategory.id,
+            name: 'Средние грузовики',
+            description: 'Грузовики от 3.5 до 12 тонн',
         },
-        {
-            key: 'SESSION_TTL_HOURS',
-            value: '24',
-            description: 'Session TTL in hours'
+    });
+    await Promise.all([
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: lightTruckType.id, name: 'Газель' } },
+            update: {},
+            create: {
+                typeId: lightTruckType.id,
+                name: 'Газель',
+                description: 'ГАЗель и аналоги (до 1.5 тонн)',
+            },
+        }),
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: lightTruckType.id, name: 'Бычок' } },
+            update: {},
+            create: {
+                typeId: lightTruckType.id,
+                name: 'Бычок',
+                description: 'Малый грузовик (до 3 тонн)',
+            },
+        }),
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: mediumTruckType.id, name: 'Средний грузовик' } },
+            update: {},
+            create: {
+                typeId: mediumTruckType.id,
+                name: 'Средний грузовик',
+                description: 'Грузовик 5-10 тонн',
+            },
+        }),
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: mediumTruckType.id, name: 'Рефрижератор' } },
+            update: {},
+            create: {
+                typeId: mediumTruckType.id,
+                name: 'Рефрижератор',
+                description: 'Грузовик с холодильной установкой',
+            },
+        }),
+    ]);
+    const specialCategory = await prisma.vehicleCategory.upsert({
+        where: { name: 'Специальная техника' },
+        update: {},
+        create: {
+            name: 'Специальная техника',
+            description: 'Специализированная техника',
         },
-        {
-            key: 'NOTIFICATION_QUEUE_SIZE',
-            value: '1000',
-            description: 'Maximum notification queue size'
-        }
-    ];
-    for (const setting of systemSettings) {
-        await prisma.systemSetting.upsert({
-            where: { key: setting.key },
-            update: { value: setting.value },
-            create: setting
-        });
-    }
-    console.log('✅ Database seeding completed successfully!');
+    });
+    const specialType = await prisma.vehicleType.upsert({
+        where: { categoryId_name: { categoryId: specialCategory.id, name: 'Погрузочная техника' } },
+        update: {},
+        create: {
+            categoryId: specialCategory.id,
+            name: 'Погрузочная техника',
+            description: 'Техника для погрузо-разгрузочных работ',
+        },
+    });
+    await Promise.all([
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: specialType.id, name: 'Кран' } },
+            update: {},
+            create: {
+                typeId: specialType.id,
+                name: 'Кран',
+                description: 'Автокран различной грузоподъемности',
+            },
+        }),
+        prisma.vehicleSubtype.upsert({
+            where: { typeId_name: { typeId: specialType.id, name: 'Эвакуатор' } },
+            update: {},
+            create: {
+                typeId: specialType.id,
+                name: 'Эвакуатор',
+                description: 'Эвакуатор для перевозки автомобилей',
+            },
+        }),
+    ]);
+    console.log('✅ Created vehicle catalog');
+    console.log('Creating admin user...');
+    const adminUser = await prisma.user.upsert({
+        where: { telegramId: BigInt(123456789) },
+        update: {},
+        create: {
+            telegramId: BigInt(123456789),
+            username: 'admin',
+            firstName: 'System',
+            lastName: 'Administrator',
+            role: client_1.RoleType.ADMIN,
+            referralCode: 'ADMIN001',
+            balance: 0,
+            frozenBalance: 0,
+        },
+    });
+    console.log(`✅ Created admin user: ${adminUser.firstName} ${adminUser.lastName}`);
+    console.log('Creating test customer...');
+    const customerUser = await prisma.user.upsert({
+        where: { telegramId: BigInt(987654321) },
+        update: {},
+        create: {
+            telegramId: BigInt(987654321),
+            username: 'testcustomer',
+            firstName: 'Тест',
+            lastName: 'Заказчик',
+            role: client_1.RoleType.CUSTOMER,
+            referralCode: 'CUST001',
+            balance: 1000.00,
+            frozenBalance: 0,
+        },
+    });
+    console.log(`✅ Created test customer: ${customerUser.firstName} ${customerUser.lastName}`);
+    console.log('Creating test executor...');
+    const executorUser = await prisma.user.upsert({
+        where: { telegramId: BigInt(456789123) },
+        update: {},
+        create: {
+            telegramId: BigInt(456789123),
+            username: 'testexecutor',
+            firstName: 'Тест',
+            lastName: 'Исполнитель',
+            role: client_1.RoleType.EXECUTOR,
+            referralCode: 'EXEC001',
+            balance: 500.00,
+            frozenBalance: 0,
+        },
+    });
+    await prisma.userRegion.upsert({
+        where: { userId_regionId: { userId: executorUser.id, regionId: regions[0].id } },
+        update: {},
+        create: {
+            userId: executorUser.id,
+            regionId: regions[0].id,
+            tariffType: client_1.TariffType.OPTIMAL,
+            paidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        },
+    });
+    console.log(`✅ Created test executor: ${executorUser.firstName} ${executorUser.lastName}`);
+    console.log('Creating basic configuration...');
+    await Promise.all([
+        prisma.config.upsert({
+            where: { key: 'ORDER_PLACEMENT_FEE' },
+            update: {},
+            create: {
+                key: 'ORDER_PLACEMENT_FEE',
+                value: '70.00',
+                description: 'Стоимость размещения заказа для заказчиков',
+            },
+        }),
+        prisma.config.upsert({
+            where: { key: 'REFERRAL_BONUS' },
+            update: {},
+            create: {
+                key: 'REFERRAL_BONUS',
+                value: '50.00',
+                description: 'Бонус за приведенного пользователя',
+            },
+        }),
+        prisma.config.upsert({
+            where: { key: 'MIN_WITHDRAWAL_AMOUNT' },
+            update: {},
+            create: {
+                key: 'MIN_WITHDRAWAL_AMOUNT',
+                value: '100.00',
+                description: 'Минимальная сумма для вывода средств',
+            },
+        }),
+        prisma.config.upsert({
+            where: { key: 'SYSTEM_COMMISSION' },
+            update: {},
+            create: {
+                key: 'SYSTEM_COMMISSION',
+                value: '5.00',
+                description: 'Комиссия системы в процентах',
+            },
+        }),
+    ]);
+    console.log('✅ Created basic configuration');
+    console.log('🎉 Seed completed successfully!');
 }
 main()
-    .then(async () => {
-    await prisma.$disconnect();
-})
-    .catch(async (e) => {
-    console.error('❌ Error during seeding:', e);
-    await prisma.$disconnect();
+    .catch(e => {
+    console.error('❌ Seed failed:', e);
     process.exit(1);
+})
+    .finally(async () => {
+    await prisma.$disconnect();
 });
 //# sourceMappingURL=seed.js.map

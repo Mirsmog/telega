@@ -1,48 +1,57 @@
-import { ValidationPipe } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
-import { NestFactory } from '@nestjs/core'
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
-import { AppModule } from './app.module'
+import { Logger, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const logger = new Logger('Bootstrap');
 
-  // Get configuration service
-  const configService = app.get(ConfigService)
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
 
-  // Enable CORS
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT', 3000);
+  const apiPrefix = configService.get<string>('API_PREFIX', 'api');
+  const apiVersion = configService.get<string>('API_VERSION', 'v1');
+
+  // Global prefix
+  app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`);
+
+  // CORS Configuration
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://localhost:3000',
-      'https://localhost:3001',
-      // Add your production domains here
-    ],
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
-  })
+  });
 
-  // Global prefix for API
-  const apiPrefix = configService.get('API_PREFIX', 'api')
-  const apiVersion = configService.get('API_VERSION', 'v1')
-  app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`)
+  // Global Exception Filter
+  app.useGlobalFilters(new HttpExceptionFilter());
 
-  // Global validation pipe
+  // Global Response Interceptor
+  app.useGlobalInterceptors(new ResponseInterceptor());
+
+  // Global Validation Pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
+      forbidUnknownValues: true,
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,
       },
     }),
-  )
+  );
 
-  // Swagger API Documentation
+  // Swagger Documentation
   const config = new DocumentBuilder()
     .setTitle('Telega Logistics API')
-    .setDescription('API для системы логистики Telega')
+    .setDescription('Маркетплейс логистических услуг через Telegram Bot')
     .setVersion('1.0')
     .addBearerAuth(
       {
@@ -55,33 +64,30 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
-    .addTag('auth', 'Authentication endpoints')
-    .addTag('users', 'User management endpoints')
-    .addTag('orders', 'Order management endpoints')
-    .addTag('payments', 'Payment processing endpoints')
-    .addTag('regions', 'Region management endpoints')
-    .addTag('vehicles', 'Vehicle management endpoints')
-    .addTag('notifications', 'Notification endpoints')
-    .build()
+    .addTag('auth', 'Аутентификация пользователей')
+    .addTag('users', 'Управление пользователями')
+    .addTag('orders', 'Заказы и матчинг')
+    .addTag('payments', 'Платежи и балансы')
+    .addTag('regions', 'Регионы и тарифы')
+    .addTag('vehicles', 'Каталог транспорта')
+    .addTag('admin', 'Административная панель')
+    .build();
 
-  const document = SwaggerModule.createDocument(app, config)
+  const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup(`${apiPrefix}/docs`, app, document, {
     swaggerOptions: {
       persistAuthorization: true,
     },
-  })
+  });
 
-  // Get port from environment
-  const port = configService.get('PORT', 3000)
+  await app.listen(port);
 
-  await app.listen(port)
-
-  console.log(`🚀 Telega API is running on: http://localhost:${port}`)
-  console.log(`📚 API Documentation: http://localhost:${port}/${apiPrefix}/docs`)
-  console.log(`🔍 Health Check: http://localhost:${port}/${apiPrefix}/${apiVersion}/health`)
+  logger.log(`🚀 Application is running on: http://localhost:${port}/${apiPrefix}/${apiVersion}`);
+  logger.log(`📚 Swagger documentation: http://localhost:${port}/${apiPrefix}/docs`);
 }
 
-bootstrap().catch((error) => {
-  console.error('❌ Failed to start application:', error)
-  process.exit(1)
-})
+bootstrap().catch(err => {
+  const logger = new Logger('Bootstrap');
+  logger.error('❌ Error starting server:', err);
+  process.exit(1);
+});

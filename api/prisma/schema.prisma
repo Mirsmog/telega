@@ -1,4 +1,5 @@
-// This is your Prisma schema file,
+
+
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -10,363 +11,642 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model (unified Customer + Performer)
+// ==================== ENUMS ====================
+
+enum RoleType {
+  CUSTOMER
+  EXECUTOR
+  ADMIN
+}
+
+enum OrderType {
+  A_TO_B        // Перевозка A→B
+  PLACE         // Работа в месте
+  PEOPLE        // Перевозка людей
+}
+
+enum OrderStatus {
+  DRAFT         // Черновик
+  PENDING       // Ожидает модерации
+  ACTIVE        // Активен (опубликован)
+  IN_PROGRESS   // В работе
+  COMPLETED     // Завершен
+  CANCELLED     // Отменен
+  REJECTED      // Отклонен модерацией
+}
+
+enum PaymentStatus {
+  PENDING       // Ожидает оплаты
+  PROCESSING    // В обработке
+  PAID          // Оплачено
+  FAILED        // Ошибка оплаты
+  REFUNDED      // Возвращено
+}
+
+enum TariffType {
+  ONE_TIME      // Разовый
+  OPTIMAL       // Оптимальный
+}
+
+enum AdminActionType {
+  USER_BAN
+  USER_UNBAN
+  ORDER_APPROVE
+  ORDER_REJECT
+  PAYMENT_REFUND
+  BROADCAST_SEND
+  CONFIG_UPDATE
+}
+
+enum BroadcastStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+enum BroadcastTarget {
+  ALL_USERS
+  CUSTOMERS
+  EXECUTORS
+  BY_REGION
+}
+
+enum ClientType {
+  TELEGRAM_BOT      // Telegram Bot
+  TELEGRAM_WEB_APP  // Telegram Mini App
+  WEB_BROWSER      // Веб-браузер (будущее)
+  MOBILE_APP       // Мобильное приложение (будущее)
+}
+
+enum SessionStatus {
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+// ==================== MODELS ====================
+
 model User {
-  id        Int      @id @default(autoincrement())
-  userId    BigInt   @unique @map("user_id") // Telegram user_id
-  username  String?
-  firstName String   @map("first_name")
-  lastName  String?  @map("last_name")
-  phone     String?
+  id                String             @id @default(cuid())
+  telegramId        BigInt             @unique
+  username          String?
+  firstName         String
+  lastName          String?
+  phone             String?
+  email             String?            // Для будущих клиентов
+  role              RoleType           @default(CUSTOMER)
   
-  // Role management
-  roles     UserRole[]
+  // Финансы и лимиты (КРИТИЧНО для бизнес-логики)
+  balance           Decimal            @default(0) @db.Decimal(10,2)
+  frozenBalance     Decimal            @default(0) @db.Decimal(10,2)
+  totalEarned       Decimal            @default(0) @db.Decimal(10,2)
+  orderLimit        Int                @default(2)     // Лимит активных заказов
+  createLimit       Int                @default(2)     // Лимит создания заказов
   
-  // Financial data
-  customerBalance  Decimal @default(0) @map("customer_balance") @db.Decimal(10,2)
-  performerBalance Decimal @default(0) @map("performer_balance") @db.Decimal(10,2)
+  // Статистика и репутация (ВАЖНО для доверия)
+  completedOrders   Int                @default(0)     // Завершенные заказы
+  cancelledOrders   Int                @default(0)     // Отмененные заказы  
+  averageRating     Decimal            @default(0) @db.Decimal(3,2)  // Средний рейтинг
+  totalReviews      Int                @default(0)     // Количество отзывов
   
-  // Referral system
-  refCode       String? @unique @map("ref_code")
-  parentRefCode String? @map("parent_ref_code")
-  refBalance    Decimal @default(0) @map("ref_balance") @db.Decimal(10,2)
+  // Подписка и доступ (МОНЕТИЗАЦИЯ)
+  hasActivePlan     Boolean            @default(false) // Активный план для исполнителей
+  planExpiresAt     DateTime?                          // Дата окончания плана
   
-  // User settings
-  mainLimit     Int @default(2) @map("main_limit")
-  settingLimit  Int @default(2) @map("setting_limit")
+  // Реферальная система
+  referralCode      String?            @unique
+  referredById      String?
+  referredUsers     User[]             @relation("UserReferrals")
+  referrer          User?              @relation("UserReferrals", fields: [referredById], references: [id])
   
-  // Metadata
-  rating        Int     @default(0)
-  totalOrders   Int     @default(0) @map("total_orders")
-  completedOrders Int   @default(0) @map("completed_orders")
-  cancelledOrders Int   @default(0) @map("cancelled_orders")
+  // Транспорт исполнителя
+  vehicles          UserVehicle[]
   
-  // Status
-  isActive  Boolean @default(true) @map("is_active")
-  isBlocked Boolean @default(false) @map("is_blocked")
+  // Системные поля
+  isActive          Boolean            @default(true)
+  isBanned          Boolean            @default(false)
+  banReason         String?            // Причина блокировки
+  lastSeenAt        DateTime?
   
-  // Timestamps
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  blockedAt DateTime? @map("blocked_at")
-  lastSeen  DateTime? @map("last_seen")
+  // Настройки уведомлений
+  notificationsEnabled Boolean         @default(true)
+  emailNotifications   Boolean         @default(false)
   
-  // Relations
-  createdOrders    Order[] @relation("CustomerOrders")
-  performedOrders  Order[] @relation("PerformerOrders")
-  payments         Payment[]
-  vehicles         Vehicle[]
-  userRegions      UserRegion[]
-  sessions         UserSession[]
-  notifications    Notification[]
+  // Аудит и логирование (КРИТИЧНО для отслеживания)
+  activityLog       Json               @default("[]")  // История действий [{message, timestamp, action}]
   
-  // Self-referential relation for referrals
-  referrals User[] @relation("Referrals")
-  referrer  User?  @relation("Referrals", fields: [parentRefCode], references: [refCode])
+  // Даты
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  ordersAsCustomer  Order[]            @relation("CustomerOrders")
+  ordersAsExecutor  Order[]            @relation("ExecutorOrders")
+  orderResponses    OrderResponse[]
+  payments          Payment[]
+  sessions          Session[]
+  notifications     Notification[]
+  userRegions       UserRegion[]
+  adminActions      AdminAction[]
+  broadcasts        Broadcast[]
+  paymentTransactions PaymentTransaction[]
   
   @@map("users")
 }
 
-// User roles enum
-enum RoleType {
-  CUSTOMER
-  PERFORMER
-  ADMIN
-}
-
-// User roles junction table
-model UserRole {
-  id     Int      @id @default(autoincrement())
-  userId Int      @map("user_id")
-  role   RoleType
-  
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, role])
-  @@map("user_roles")
-}
-
-// Order types
-enum OrderType {
-  A_TO_B  // Перевозка из точки А в Б
-  PLACE   // Работа по месту
-  PEOPLE  // Перевозка пассажиров
-}
-
-// Order status
-enum OrderStatus {
-  CREATED     // Создан
-  WAITING     // На модерации
-  SEARCHING   // Поиск исполнителя
-  ASSIGNED    // Назначен исполнитель
-  IN_PROGRESS // В работе
-  COMPLETED   // Завершен
-  CANCELLED   // Отменен
-}
-
-// Orders model
-model Order {
-  id          Int    @id @default(autoincrement())
-  orderNumber String @unique @map("order_number")
-  
-  // Order details
-  type        OrderType
-  status      OrderStatus @default(CREATED)
-  
-  // Participants
-  customerId  Int @map("customer_id")
-  performerId Int? @map("performer_id")
-  
-  // Vehicle requirements
-  vehicleType     String? @map("vehicle_type")
-  vehicleSubtype  String? @map("vehicle_subtype")
-  vehicleAmount   Int?    @map("vehicle_amount")
-  
-  // Location details
-  regionCode     String @map("region_code")
-  subregionCode  String? @map("subregion_code")
-  address        String
-  dropAddress    String? @map("drop_address")
-  
-  // Order specific data
-  distance       Int?    // в км (for A_TO_B)
-  passengerCount Int?    @map("passenger_count") // for PEOPLE
-  cargoInfo      String? @map("cargo_info")
-  requirements   String?
-  
-  // Financial
-  price          Decimal? @db.Decimal(10,2)
-  performerFee   Decimal? @map("performer_fee") @db.Decimal(10,2)
-  
-  // Scheduling
-  scheduledDate DateTime? @map("scheduled_date")
-  scheduledTime String?   @map("scheduled_time")
-  
-  // Timestamps
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  completedAt DateTime? @map("completed_at")
-  
-  // Relations
-  customer   User     @relation("CustomerOrders", fields: [customerId], references: [id])
-  performer  User?    @relation("PerformerOrders", fields: [performerId], references: [id])
-  region     Region   @relation(fields: [regionCode], references: [code])
-  payments   Payment[]
-  history    OrderHistory[]
-  
-  @@map("orders")
-}
-
-// Order history for tracking status changes
-model OrderHistory {
-  id        Int      @id @default(autoincrement())
-  orderId   Int      @map("order_id")
-  status    OrderStatus
-  comment   String?
-  changedBy Int?     @map("changed_by")
-  createdAt DateTime @default(now()) @map("created_at")
-  
-  // Relations
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
-  @@map("order_history")
-}
-
-// Regions model
 model Region {
-  id       Int    @id @default(autoincrement())
-  code     String @unique
-  name     String
+  id                String             @id @default(cuid())
+  name              String             @unique
+  code              String             @unique         // Например, "MSK", "SPB"
+  regionCode        String             @unique         // "01", "02" - КРИТИЧНО для матчинга!
   
-  // Hierarchy
-  parentCode String? @map("parent_code")
-  level      Int     @default(1) // 1 = region, 2 = subregion
+  // Подрегионы (ВАЖНО для точного матчинга)
+  subRegions        Json               @default("[]")  // Список подрегионов ["Центр", "Север", ...]
   
-  // Pricing
-  customerTariff   Decimal @default(70) @map("customer_tariff") @db.Decimal(10,2)
-  performerTariff  Decimal @default(200) @map("performer_tariff") @db.Decimal(10,2)
-  optimalTariff    Decimal @default(150) @map("optimal_tariff") @db.Decimal(10,2)
+  // Координаты региона (для карт в Mini App)
+  centerLatitude    Decimal?           @db.Decimal(10,8)
+  centerLongitude   Decimal?           @db.Decimal(11,8)
   
-  // Status
-  isActive Boolean @default(true) @map("is_active")
+  // Тарифы для исполнителей
+  oneTimePlanPrice  Decimal            @db.Decimal(10,2) // Разовый план
+  monthlyPlanPrice  Decimal            @db.Decimal(10,2) // Месячный план
   
-  // Relations
-  parent     Region?      @relation("RegionHierarchy", fields: [parentCode], references: [code])
-  children   Region[]     @relation("RegionHierarchy")
-  orders     Order[]
-  userRegions UserRegion[]
+  isActive          Boolean            @default(true)
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  orders            Order[]
+  userRegions       UserRegion[]
+  broadcasts        Broadcast[]
   
   @@map("regions")
 }
 
-// User-Region relationship (which regions user works in)
 model UserRegion {
-  id       Int @id @default(autoincrement())
-  userId   Int @map("user_id")
-  regionCode String @map("region_code")
-  isActive Boolean @default(true) @map("is_active")
+  id                String             @id @default(cuid())
+  userId            String
+  regionId          String
+  regionCode        String             // Дублируем для быстрого поиска
   
-  createdAt DateTime @default(now()) @map("created_at")
+  // Активные подрегионы для исполнителя (КРИТИЧНО для матчинга)
+  activeSubRegions  Json               @default("[]")  // Активные подрегионы ["Центр", "Север"]
   
-  // Relations
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  region Region @relation(fields: [regionCode], references: [code])
+  planType          TariffType
+  paidUntil         DateTime?
+  isActive          Boolean            @default(true)
   
-  @@unique([userId, regionCode])
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  region            Region             @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  @@unique([userId, regionId])
   @@map("user_regions")
 }
 
-// Vehicle categories
 model VehicleCategory {
-  id          Int    @id @default(autoincrement())
-  code        String @unique
-  name        String
-  description String?
+  id                String             @id @default(cuid())
+  name              String             @unique
+  displayName       String             // Название для отображения в UI
+  description       String?
+  iconUrl           String?            // Иконка для Mini App
+  sortOrder         Int                @default(0)
+  isActive          Boolean            @default(true)
   
-  // Relations
-  types Vehicle[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  vehicleTypes      VehicleType[]
   
   @@map("vehicle_categories")
 }
 
-// User vehicles
-model Vehicle {
-  id       Int    @id @default(autoincrement())
-  userId   Int    @map("user_id")
+model VehicleType {
+  id                String             @id @default(cuid())
+  categoryId        String
+  name              String
+  displayName       String             // Название для отображения в UI
+  description       String?
+  iconUrl           String?            // Иконка для Mini App
+  sortOrder         Int                @default(0)
+  isActive          Boolean            @default(true)
   
-  // Vehicle details
-  categoryCode String @map("category_code")
-  type         String
-  subtype      String?
-  brand        String?
-  model        String?
-  licensePlate String? @map("license_plate")
+  category          VehicleCategory    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   
-  // Capacity
-  maxWeight    Int?    @map("max_weight") // kg
-  maxVolume    Int?    @map("max_volume") // liters
-  maxPassengers Int?   @map("max_passengers")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   
-  // Status
-  isActive Boolean @default(true) @map("is_active")
+  // Связи
+  vehicleSubtypes   VehicleSubtype[]
   
-  // Timestamps
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  
-  // Relations
-  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category VehicleCategory @relation(fields: [categoryCode], references: [code])
-  
-  @@map("vehicles")
+  @@unique([categoryId, name])
+  @@map("vehicle_types")
 }
 
-// Payment statuses
-enum PaymentStatus {
-  CREATED
-  PENDING
-  CONFIRMED
-  CANCELLED
-  FAILED
+model VehicleSubtype {
+  id                String             @id @default(cuid())
+  typeId            String
+  name              String
+  displayName       String             // Название для отображения в UI
+  description       String?
+  iconUrl           String?            // Иконка для Mini App
+  sortOrder         Int                @default(0)
+  isActive          Boolean            @default(true)
+  
+  type              VehicleType        @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  userVehicles      UserVehicle[]
+  orders            Order[]
+  
+  @@unique([typeId, name])
+  @@map("vehicle_subtypes")
 }
 
-// Payments model
+model UserVehicle {
+  id                String             @id @default(cuid())
+  userId            String
+  subtypeId         String
+  
+  // Характеристики
+  brand             String?
+  model             String?
+  year              Int?
+  licensePlate      String?
+  color             String?
+  
+  // Грузоподъемность
+  loadCapacity      Decimal?           @db.Decimal(8,2) // тонны
+  volumeCapacity    Decimal?           @db.Decimal(8,2) // м³
+  
+  // Дополнительные возможности
+  hasRefrigerator   Boolean            @default(false)
+  hasLifting        Boolean            @default(false)
+  canCarryFragile   Boolean            @default(false)
+  
+  // Фото и документы (для Mini App)
+  photos            Json               @default("[]")   // Массив URL фотографий
+  documents         Json               @default("[]")   // Документы на транспорт
+  
+  isActive          Boolean            @default(true)
+  isVerified        Boolean            @default(false)  // Проверен администратором
+  
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subtype           VehicleSubtype     @relation(fields: [subtypeId], references: [id])
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  @@unique([userId, subtypeId])
+  @@map("user_vehicles")
+}
+
+model Order {
+  id                String             @id @default(cuid())
+  orderNumber       String             @unique           // КРИТИЧНО! Номер заказа для UI
+  customerId        String
+  executorId        String?
+  regionId          String
+  vehicleSubtypeId  String?
+  
+  // Основная информация
+  type              OrderType
+  title             String
+  description       String
+  
+  // Адреса и локация
+  pickupAddress     String?            // Адрес подачи
+  deliveryAddress   String?            // Адрес доставки  
+  workAddress       String?            // Адрес работы (для типа PLACE)
+  pickupLatitude    Decimal?           @db.Decimal(10,8)
+  pickupLongitude   Decimal?           @db.Decimal(11,8)
+  deliveryLatitude  Decimal?           @db.Decimal(10,8)
+  deliveryLongitude Decimal?           @db.Decimal(11,8)
+  
+  // Региональная привязка (КРИТИЧНО для матчинга!)
+  regionCode        String             // Код региона для быстрого поиска
+  subRegion         String?            // Подрегион для точного матчинга
+  
+  // Время
+  scheduledDate     DateTime?
+  scheduledTime     String?            // HH:MM формат
+  deadlineDate      DateTime?
+  isUrgent          Boolean            @default(false)
+  
+  // Финансовые условия (УЛУЧШЕНО)
+  budgetFrom        Decimal?           @db.Decimal(10,2)  // Бюджет от
+  budgetTo          Decimal?           @db.Decimal(10,2)  // Бюджет до  
+  proposedPrice     Decimal?           @db.Decimal(10,2)  // Предложенная цена исполнителем
+  agreedPrice       Decimal?           @db.Decimal(10,2)  // Согласованная цена
+  isPriceFixed      Boolean            @default(false)    // Фиксированная цена
+  
+  // Требования к грузу/работе
+  cargoWeight       Decimal?           @db.Decimal(8,2)
+  cargoVolume       Decimal?           @db.Decimal(8,2)
+  cargoDescription  String?            // Что везем - ВАЖНО для исполнителей
+  estimatedDistance Decimal?           @db.Decimal(8,2)   // КРИТИЧНО для расчета стоимости
+  needsRefrigerator Boolean            @default(false)
+  needsLifting      Boolean            @default(false)
+  isFragile         Boolean            @default(false)
+  
+  // Количество людей (для типа PEOPLE)
+  passengerCount    Int?
+  
+  // Требования и комментарии (ВАЖНО)
+  requirements      String?            // Требования к перевозке
+  customerComment   String?            // Комментарий заказчика
+  executorComment   String?            // Комментарий исполнителя
+  
+  // Статус и модерация
+  status            OrderStatus        @default(DRAFT)
+  moderationComment String?
+  moderatedAt       DateTime?
+  moderatedById     String?
+  
+  // Логика рассылки (КРИТИЧНО для бизнес-процессов)
+  isSentToExecutors Boolean            @default(false)    // Отправлен исполнителям
+  sentToAllRegions  Boolean            @default(false)    // Массовая рассылка
+  viewsCount        Int                @default(0)        // Количество просмотров
+  responsesCount    Int                @default(0)        // Количество откликов
+  
+  // Контактная информация
+  contactPhone      String?
+  contactName       String?
+  
+  // Фото и файлы (для Mini App)
+  photos            Json               @default("[]")     // Фотографии груза
+  documents         Json               @default("[]")     // Документы
+  
+  // Аудит и история (КРИТИЧНО для отслеживания)
+  activityLog       Json               @default("[]")     // История изменений
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  customer          User               @relation("CustomerOrders", fields: [customerId], references: [id])
+  executor          User?              @relation("ExecutorOrders", fields: [executorId], references: [id])
+  region            Region             @relation(fields: [regionId], references: [id])
+  vehicleSubtype    VehicleSubtype?    @relation(fields: [vehicleSubtypeId], references: [id])
+  responses         OrderResponse[]
+  
+  @@map("orders")
+}
+
+model OrderResponse {
+  id                String             @id @default(cuid())
+  orderId           String
+  executorId        String
+  
+  // Предложение исполнителя
+  proposedPrice     Decimal?           @db.Decimal(10,2)
+  comment           String?
+  estimatedDuration String?            // Предполагаемое время выполнения
+  
+  // Статус отклика
+  status            String             @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  
+  // Фото транспорта (для Mini App)
+  vehiclePhotos     Json               @default("[]")
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  order             Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  executor          User               @relation(fields: [executorId], references: [id], onDelete: Cascade)
+  
+  @@unique([orderId, executorId])
+  @@map("order_responses")
+}
+
 model Payment {
-  id        Int    @id @default(autoincrement())
-  paymentId String @unique @map("payment_id") // Tinkoff PaymentId
+  id                String             @id @default(cuid())
+  userId            String
   
-  // Payment details
-  userId    Int            @map("user_id")
-  orderId   Int?           @map("order_id")
-  amount    Decimal        @db.Decimal(10,2)
-  status    PaymentStatus  @default(CREATED)
+  // Tinkoff данные
+  tinkoffPaymentId  String?            @unique
+  tinkoffStatus     String?
   
-  // Tinkoff specific
-  terminalKey String? @map("terminal_key")
-  paymentURL  String? @map("payment_url")
+  // Сумма и назначение
+  amount            Decimal            @db.Decimal(10,2)
+  description       String
   
-  // Metadata
-  description String?
-  metadata    Json?   @db.JsonB
+  // Статус платежа
+  status            PaymentStatus      @default(PENDING)
   
-  // Timestamps
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  paidAt    DateTime? @map("paid_at")
+  // Метаданные
+  metadata          Json?              // Дополнительные данные для Tinkoff
   
-  // Relations
-  user  User   @relation(fields: [userId], references: [id])
-  order Order? @relation(fields: [orderId], references: [id])
+  // Даты
+  paidAt            DateTime?
+  expiresAt         DateTime?
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  user              User               @relation(fields: [userId], references: [id])
   
   @@map("payments")
 }
 
-// User sessions for authentication and FSM state management
-model UserSession {
-  id       Int    @id @default(autoincrement())
-  userId   Int    @map("user_id")
-  sessionId String @unique @map("session_id")
+// Детальная информация о платежных операциях
+model PaymentTransaction {
+  id                String             @id @default(cuid())
+  userId            String
+  orderId           String?
   
-  // Authentication data
-  refreshToken String? @map("refresh_token")
-  deviceInfo   String? @map("device_info")
-  ipAddress    String? @map("ip_address")
-  userAgent    String? @map("user_agent")
+  // Детали операции
+  type              String             // TOP_UP, WITHDRAWAL, ORDER_PAYMENT, PLAN_PAYMENT
+  amount            Decimal            @db.Decimal(10,2)
+  description       String
+  status            String             // PENDING, COMPLETED, FAILED
   
-  // Session data (FSM)
-  currentState String? @map("current_state")
-  context      Json?   @db.JsonB
-  clientType   String? @map("client_type") // 'bot' | 'miniapp'
+  // Платежная система
+  paymentMethod     String?            // TINKOFF, CARD, BALANCE
+  externalId        String?            // ID в внешней системе
   
-  // Timestamps
-  createdAt    DateTime @default(now()) @map("created_at")
-  lastActivity DateTime @default(now()) @map("last_activity")
-  expiresAt    DateTime @map("expires_at")
+  // Метаданные
+  metadata          Json?
   
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   
-  @@map("user_sessions")
+  // Связи  
+  user              User               @relation(fields: [userId], references: [id])
+  
+  @@map("payment_transactions")
 }
 
-// Notifications model
+model Session {
+  id                String             @id @default(cuid())
+  userId            String
+  
+  // Информация о клиенте
+  clientType        ClientType         // Тип клиента
+  chatId            BigInt?            // Для Telegram Bot
+  webAppInitData    String?            // Для Telegram Mini App
+  userAgent         String?            // User Agent браузера
+  ipAddress         String?            // IP адрес
+  
+  // Состояние сессии
+  currentState      String?            // Текущее состояние диалога (для бота)
+  contextData       Json?              // Контекст сессии
+  
+  // Время активности
+  lastActivity      DateTime           @default(now())
+  expiresAt         DateTime
+  status            SessionStatus      @default(ACTIVE)
+  
+  // Устройство и локация
+  deviceInfo        Json?              // Информация об устройстве
+  timezone          String?            // Часовой пояс пользователя
+  language          String?            // Язык интерфейса
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("sessions")
+}
+
 model Notification {
-  id      Int    @id @default(autoincrement())
-  userId  Int    @map("user_id")
+  id                String             @id @default(cuid())
+  userId            String
   
-  // Notification content
-  type    String
-  title   String
-  message String
-  data    Json?  @db.JsonB
+  // Содержание
+  title             String
+  message           String
+  type              String             // ORDER_UPDATE, PAYMENT, SYSTEM, PROMO
   
-  // Status
-  isRead Boolean @default(false) @map("is_read")
-  isSent Boolean @default(false) @map("is_sent")
+  // Каналы доставки
+  sendToTelegram    Boolean            @default(true)
+  sendToEmail       Boolean            @default(false)
+  sendToWebApp      Boolean            @default(true)   // Для Mini App
   
-  // Priority
-  priority String @default("normal") // 'high' | 'normal' | 'low'
+  // Статус
+  isRead            Boolean            @default(false)
+  isDelivered       Boolean            @default(false)
   
-  // Timestamps
-  createdAt DateTime @default(now()) @map("created_at")
-  readAt    DateTime? @map("read_at")
-  sentAt    DateTime? @map("sent_at")
+  // Планирование
+  scheduledFor      DateTime?
+  sentAt            DateTime?
   
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Данные для отображения
+  iconUrl           String?            // Иконка уведомления
+  actionUrl         String?            // Ссылка для перехода
+  metadata          Json?              // Дополнительные данные
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("notifications")
 }
 
-// System settings
-model SystemSetting {
-  id    Int    @id @default(autoincrement())
-  key   String @unique
-  value String
-  description String?
+model AdminAction {
+  id                String             @id @default(cuid())
+  adminId           String
   
-  updatedAt DateTime @updatedAt @map("updated_at")
+  // Тип действия
+  type              AdminActionType
+  targetId          String?            // ID целевого объекта
+  targetType        String?            // Тип целевого объекта
   
-  @@map("system_settings")
+  // Описание
+  description       String
+  comment           String?
+  
+  // Метаданные
+  metadata          Json?              // Дополнительные данные о действии
+  
+  // Информация о запросе
+  ipAddress         String?
+  userAgent         String?
+  clientType        ClientType?        // Откуда выполнено действие
+  
+  createdAt         DateTime           @default(now())
+  
+  // Связи
+  admin             User               @relation(fields: [adminId], references: [id])
+  
+  @@map("admin_actions")
+}
+
+model Broadcast {
+  id                String             @id @default(cuid())
+  adminId           String
+  
+  // Содержание
+  title             String
+  message           String
+  imageUrl          String?
+  actionUrl         String?            // Ссылка для кнопки
+  
+  // Настройки рассылки
+  target            BroadcastTarget
+  targetRegionId    String?            // Для target BY_REGION
+  
+  // Каналы рассылки
+  sendToBot         Boolean            @default(true)    // Отправить в Telegram Bot
+  sendToWebApp      Boolean            @default(true)    // Отправить в Mini App
+  
+  // Статус
+  status            BroadcastStatus    @default(DRAFT)
+  
+  // Планирование
+  scheduledFor      DateTime?
+  
+  // Статистика
+  totalRecipients   Int                @default(0)
+  sentCount         Int                @default(0)
+  deliveredCount    Int                @default(0)
+  readCount         Int                @default(0)       // Количество прочитанных
+  clickCount        Int                @default(0)       // Количество кликов
+  failedCount       Int                @default(0)
+  
+  // Ошибки
+  errorMessage      String?
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Связи
+  admin             User               @relation(fields: [adminId], references: [id])
+  targetRegion      Region?            @relation(fields: [targetRegionId], references: [id])
+  
+  @@map("broadcasts")
+}
+
+model Config {
+  id                String             @id @default(cuid())
+  key               String             @unique
+  value             String
+  description       String?
+  
+  // Область применения
+  scope             String             @default("GLOBAL") // GLOBAL, BOT, WEBAPP, ADMIN
+  
+  // Метаданные
+  isSystem          Boolean            @default(false)
+  isEncrypted       Boolean            @default(false)
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  @@map("configs")
 } 
